@@ -1,0 +1,11 @@
+[Unit]
+Description=Pré-aquecimento do OCR — carrega os modelos do tesseract no page cache
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/ocr-warmup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

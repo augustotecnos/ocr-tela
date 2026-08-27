@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""OCR de área da tela para GNOME/Wayland, no estilo do Snipping Tool do Windows.
+
+Congela a tela, você arrasta a seleção e, ao soltar o botão, o texto reconhecido
+vai direto para o clipboard. Sem janela de preview, sem barra de ferramentas e
+sem nenhuma imagem deixada em disco.
+"""
+import os
+import shutil
+import subprocess
+import sys
+from urllib.parse import unquote
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
+gi.require_version("Gio", "2.0")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
+
+
+def _env(name, default):
+    return os.environ.get(name, default)
+
+
+LANG = _env("OCR_LANG", "por")                  # idiomas do tesseract, ex.: "por+eng"
+TESSDATA = os.path.expanduser(_env("OCR_TESSDATA", "~/.tessdata_fast"))
+MAX_SIDE = int(_env("OCR_MAX_SIDE", "1400"))    # recortes maiores são reduzidos
+DIM = float(_env("OCR_DIM", "0.45"))            # escurecimento fora da seleção
+NOTIFY = _env("OCR_NOTIFY", "1") != "0"         # 0 = totalmente silencioso
+MIN_SEL = 8                                     # abaixo disso é clique, não seleção
+
+TMP_SHOT = f"/tmp/ocr-tela-{os.getpid()}.png"
+TMP_CROP = f"/tmp/ocr-tela-{os.getpid()}-crop.png"
+
+
+def notify(msg):
+    if NOTIFY:
+        subprocess.run(["notify-send", "-t", "2500", "-a", "OCR de tela", "OCR", msg])
+
+
+def cleanup():
+    for path in (TMP_SHOT, TMP_CROP):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def grab_screen():
+    """Captura a área de trabalho inteira pelo portal, sem exibir UI nenhuma.
+
+    O portal grava o PNG na pasta de imagens do usuário; movemos na hora para
+    /tmp para não deixar rastro. Devolve o caminho do arquivo, ou None.
+    """
+    loop = GLib.MainLoop()
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    desktop = Gio.DBusProxy.new_sync(
+        bus, Gio.DBusProxyFlags.NONE, None,
+        "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+        "org.freedesktop.portal.Screenshot", None,
+    )
+    opts = {"interactive": GLib.Variant("b", False)}
+    handle = desktop.call_sync(
+        "Screenshot", GLib.Variant("(sa{sv})", ("", opts)),
+        Gio.DBusCallFlags.NONE, 5000, None,
+    ).unpack()[0]
+
+    out = {}
+
+    def on_response(proxy, sender, signal, params):
+        response, results = params.unpack()
+        out["ok"] = response == 0
+        out["uri"] = results.get("uri", "")
+        loop.quit()
+
+    request = Gio.DBusProxy.new_for_bus_sync(
+        Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, None,
+        "org.freedesktop.portal.Desktop", handle,
+        "org.freedesktop.portal.Request", None,
+    )
+    request.connect("g-signal", on_response)
+    loop.run()
+
+    if not out.get("ok"):
+        return None
+    src = unquote(out["uri"].replace("file://", ""))
+    if not os.path.exists(src):
+        return None
+    shutil.move(src, TMP_SHOT)
+    return TMP_SHOT
+
+
+def _rect(x0, y0, dx, dy):
+    """Ponto inicial + deslocamento -> (x, y, largura, altura), sempre positivos."""
+    return min(x0, x0 + dx), min(y0, y0 + dy), abs(dx), abs(dy)
+
+
+def select_area(png):
+    """Congela a tela e deixa o usuário arrastar a seleção.
+
+    Abre uma janela por monitor, cada uma desenhando a fatia correspondente da
+    captura. Devolve (x, y, w, h) em pixels da imagem, ou None se cancelado.
+    """
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file(png)
+    iw, ih = pixbuf.get_width(), pixbuf.get_height()
+    result = {"rect": None}
+
+    app = Gtk.Application(application_id="io.github.ocrtela",
+                          flags=Gio.ApplicationFlags.NON_UNIQUE)
+
+    def on_activate(application):
+        display = Gdk.Display.get_default()
+        monitors = display.get_monitors()
+        geoms = [monitors.get_item(i).get_geometry()
+                 for i in range(monitors.get_n_items())]
+
+        # Área de trabalho em coordenadas lógicas -> fator para pixels da imagem.
+        dw = max(g.x + g.width for g in geoms)
+        dh = max(g.y + g.height for g in geoms)
+        fx, fy = iw / dw, ih / dh
+
+        windows = []
+
+        def close_all():
+            for win in windows:
+                win.close()
+
+        for index in range(monitors.get_n_items()):
+            monitor = monitors.get_item(index)
+            geom = geoms[index]
+            # Recorte da captura que pertence a este monitor, em pixels.
+            ox, oy = geom.x * fx, geom.y * fy
+
+            win = Gtk.ApplicationWindow(application=application)
+            win.set_decorated(False)
+            win.fullscreen_on_monitor(monitor)
+            win.set_cursor(Gdk.Cursor.new_from_name("crosshair", None))
+
+            area = Gtk.DrawingArea()
+            win.set_child(area)
+            state = {"start": (0, 0), "cur": None}
+
+            def draw(widget, cr, w, h, ox=ox, oy=oy, geom=geom, state=state):
+                sx = w / (geom.width * fx)
+                sy = h / (geom.height * fy)
+
+                def paint_screen():
+                    cr.save()
+                    cr.scale(sx, sy)
+                    Gdk.cairo_set_source_pixbuf(cr, pixbuf, -ox, -oy)
+                    cr.paint()
+                    cr.restore()
+
+                paint_screen()                        # tela congelada ao fundo
+                cr.set_source_rgba(0, 0, 0, DIM)      # escurece tudo
+                cr.rectangle(0, 0, w, h)
+                cr.fill()
+
+                if state["cur"]:
+                    x, y, rw, rh = state["cur"]
+                    cr.save()                         # brilho de volta na seleção
+                    cr.rectangle(x, y, rw, rh)
+                    cr.clip()
+                    paint_screen()
+                    cr.restore()
+                    cr.set_source_rgb(1, 1, 1)
+                    cr.set_line_width(1)
+                    cr.rectangle(x + 0.5, y + 0.5, rw, rh)
+                    cr.stroke()
+
+            area.set_draw_func(draw)
+
+            def on_begin(gesture, x, y, state=state):
+                state["start"] = (x, y)
+                state["cur"] = None
+
+            def on_update(gesture, dx, dy, state=state, area=area):
+                state["cur"] = _rect(*state["start"], dx, dy)
+                area.queue_draw()
+
+            def on_end(gesture, dx, dy, state=state, area=area, geom=geom):
+                x, y, w, h = _rect(*state["start"], dx, dy)
+                if w >= MIN_SEL and h >= MIN_SEL:
+                    lw, lh = area.get_width(), area.get_height()
+                    # Coordenadas da janela -> lógicas globais -> pixels da imagem.
+                    gx = geom.x + x * geom.width / lw
+                    gy = geom.y + y * geom.height / lh
+                    gw = w * geom.width / lw
+                    gh = h * geom.height / lh
+                    result["rect"] = (int(gx * fx), int(gy * fy),
+                                      max(1, int(gw * fx)), max(1, int(gh * fy)))
+                close_all()
+
+            gesture = Gtk.GestureDrag()
+            gesture.connect("drag-begin", on_begin)
+            gesture.connect("drag-update", on_update)
+            gesture.connect("drag-end", on_end)
+            area.add_controller(gesture)
+
+            keys = Gtk.EventControllerKey()
+
+            def on_key(controller, keyval, keycode, mods):
+                if keyval == Gdk.KEY_Escape:
+                    close_all()
+                    return True
+                return False
+
+            keys.connect("key-pressed", on_key)
+            win.add_controller(keys)
+
+            windows.append(win)
+
+        for win in windows:
+            win.present()
+
+    app.connect("activate", on_activate)
+    app.run([])
+    return result["rect"]
+
+
+def ocr(png, rect):
+    """Recorta a região, reduz se for grande demais e devolve o texto lido."""
+    import PIL.Image
+
+    x, y, w, h = rect
+    img = PIL.Image.open(png).crop((x, y, x + w, y + h))
+    if max(img.size) > MAX_SIDE:
+        scale = MAX_SIDE / max(img.size)
+        img = img.resize((max(1, int(img.width * scale)),
+                          max(1, int(img.height * scale))), PIL.Image.LANCZOS)
+    img.save(TMP_CROP)
+
+    env = dict(os.environ)
+    if os.path.isdir(TESSDATA):
+        env["TESSDATA_PREFIX"] = TESSDATA
+
+    def run(psm):
+        return subprocess.run(
+            ["tesseract", TMP_CROP, "stdout", "-l", LANG, "--oem", "1", "--psm", psm],
+            capture_output=True, text=True, env=env,
+        ).stdout.strip()
+
+    return run("6") or run("3")      # bloco de texto, com fallback automático
+
+
+def main():
+    try:
+        shot = grab_screen()
+        if not shot:
+            notify("Não consegui capturar a tela")
+            return 1
+
+        rect = select_area(shot)
+        if not rect:
+            return 0                 # cancelado: sai calado, como no Windows
+
+        text = ocr(shot, rect)
+        if not text:
+            notify("Nenhum texto reconhecido")
+            return 0
+
+        proc = subprocess.Popen(["wl-copy"], stdin=subprocess.PIPE)
+        proc.communicate(text.encode())
+        notify(f"Texto copiado ({len(text)} caracteres)")
+        return 0
+    finally:
+        cleanup()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
