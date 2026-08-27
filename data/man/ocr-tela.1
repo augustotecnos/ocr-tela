@@ -1,0 +1,58 @@
+.TH OCR\-TELA 1 "2026-08-27" "ocr-tela 1.1.0" "User Commands"
+.SH NAME
+ocr\-tela \- copy text from a region of the screen
+.SH SYNOPSIS
+.B ocr\-tela
+.RB [ \-\-version ]
+.SH DESCRIPTION
+.B ocr\-tela
+freezes the screen, dims it and lets you drag a rectangle over the text you
+want. On release the selected region is recognized locally by
+.BR tesseract (1)
+and the resulting text is placed on the clipboard.
+.PP
+Nothing is displayed after the selection and no image is kept on disk. Press
+.B Esc
+to cancel; a click without dragging is treated as a cancellation too.
+.PP
+The screen capture goes through the
+.I org.freedesktop.portal.Screenshot
+desktop portal, which is the only way to read the screen under Wayland.
+.SH OPTIONS
+.TP
+.B \-\-version
+Print the version and exit.
+.SH ENVIRONMENT
+.TP
+.B OCR_LANG
+Tesseract languages, defaults to
+.BR por .
+Use for example
+.B por+eng
+for mixed text, at roughly 40% more time.
+.TP
+.B OCR_NOTIFY
+Set to
+.B 0
+to suppress the confirmation notification.
+.TP
+.B OCR_DIM
+Dimming applied outside the selection, from 0 to 1. Defaults to 0.45.
+.TP
+.B OCR_MAX_SIDE
+Crops longer than this many pixels are scaled down before recognition.
+Defaults to 1400.
+.TP
+.B OCR_TESSDATA
+Alternative directory of tesseract models. Empty, the default, uses the
+models installed on the system.
+.SH EXIT STATUS
+Returns 0 on success and when the selection is cancelled, 1 when the screen
+could not be captured.
+.SH SEE ALSO
+.BR ocr\-tela\-atalho (1),
+.BR ocr\-warmup (1),
+.BR tesseract (1),
+.BR wl\-copy (1)
+.SH AUTHOR
+Augusto Mateus

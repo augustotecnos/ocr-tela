@@ -23,6 +23,9 @@ install:
 	install -Dm644 data/$(APPID).desktop      $(DESTDIR)$(DATADIR)/applications/$(APPID).desktop
 	install -Dm644 data/$(APPID).metainfo.xml $(DESTDIR)$(DATADIR)/metainfo/$(APPID).metainfo.xml
 	install -Dm644 data/$(APPID).svg          $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/$(APPID).svg
+	install -Dm644 data/man/ocr-tela.1        $(DESTDIR)$(DATADIR)/man/man1/ocr-tela.1
+	install -Dm644 data/man/ocr-tela-atalho.1 $(DESTDIR)$(DATADIR)/man/man1/ocr-tela-atalho.1
+	install -Dm644 data/man/ocr-warmup.1      $(DESTDIR)$(DATADIR)/man/man1/ocr-warmup.1
 ifeq ($(INSTALL_SYSTEMD),1)
 	install -d $(DESTDIR)$(SYSTEMD_USER_DIR)
 	sed 's|@BINDIR@|$(BINDIR)|g' data/ocr-warmup.service.in \
@@ -37,6 +40,9 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/applications/$(APPID).desktop
 	rm -f $(DESTDIR)$(DATADIR)/metainfo/$(APPID).metainfo.xml
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/$(APPID).svg
+	rm -f $(DESTDIR)$(DATADIR)/man/man1/ocr-tela.1
+	rm -f $(DESTDIR)$(DATADIR)/man/man1/ocr-tela-atalho.1
+	rm -f $(DESTDIR)$(DATADIR)/man/man1/ocr-warmup.1
 	rm -f $(DESTDIR)$(SYSTEMD_USER_DIR)/ocr-warmup.service
 
 check:

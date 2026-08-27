@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/ocr-tela PREFIX=/usr
+
+# O serviço de pré-aquecimento é opcional e fica a cargo do usuário: um pacote
+# não deve ativar unidades por conta própria.
+override_dh_installsystemduser:
+	dh_installsystemduser --no-enable

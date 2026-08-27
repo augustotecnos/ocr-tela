@@ -126,6 +126,36 @@ O `flatpak-builder-lint` aponta `finish-args-only-wayland`: o app é Wayland-onl
 por natureza (a captura depende do portal do Wayland e o clipboard, do `wl-copy`),
 o que na submissão ao Flathub exige um pedido de exceção.
 
+### Debian / Ubuntu (.deb)
+
+O diretório `debian/` está no repositório. Para construir:
+
+```bash
+sudo apt install debhelper devscripts
+dpkg-buildpackage -us -uc -b      # pacote binário
+dpkg-buildpackage -S -us -uc      # pacote fonte, para PPA
+```
+
+O pacote passa no `lintian` sem nenhum aviso, tanto o binário quanto o fonte.
+Ele instala em `/usr`, registra as três páginas de manual e entrega a unidade
+`ocr-warmup.service` **desativada** — ativar é escolha do usuário:
+
+```bash
+systemctl --user enable --now ocr-warmup.service
+```
+
+O pacote também nunca cria atalho de teclado. Depois de instalar, quem quiser
+roda `ocr-tela-atalho` uma vez.
+
+Duas observações para quem for publicar:
+
+- O `debian/changelog` mira a série `resolute`, do Ubuntu. Para outra série, ou
+  para o Debian (onde o correto é `unstable`), altere a primeira linha antes de
+  gerar o pacote fonte.
+- O `debian/source/options` exclui `.flatpak-builder` do tarball. Sem isso, o
+  cache de build do Flatpak entra junto e o pacote fonte salta de 30 KB para
+  72 MB.
+
 ### Para empacotadores
 
 Não use o `install.sh` — ele é o caminho de instalação manual. Use o alvo padrão,

@@ -1,0 +1,31 @@
+.TH OCR\-WARMUP 1 "2026-08-27" "ocr-tela 1.1.0" "User Commands"
+.SH NAME
+ocr\-warmup \- preload tesseract models into the page cache
+.SH SYNOPSIS
+.B ocr\-warmup
+.SH DESCRIPTION
+Reads the installed tesseract language models so the first recognition of the
+session does not pay for reading them from disk. It only speeds up the first
+use and is safe to run at any time.
+.PP
+The package ships a systemd user unit,
+.IR ocr\-warmup.service ,
+which is installed but deliberately left disabled. Enable it if you want the
+warmup to run at login:
+.PP
+.EX
+systemctl \-\-user enable \-\-now ocr\-warmup.service
+.EE
+.SH ENVIRONMENT
+.TP
+.B OCR_LANG
+Language used for the warmup run, defaults to
+.BR por .
+.TP
+.B OCR_TESSDATA
+Alternative directory of models to preload as well.
+.SH SEE ALSO
+.BR ocr\-tela (1),
+.BR tesseract (1)
+.SH AUTHOR
+Augusto Mateus

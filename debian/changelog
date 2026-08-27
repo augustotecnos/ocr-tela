@@ -1,0 +1,5 @@
+ocr-tela (1.1.0) resolute; urgency=medium
+
+  * Primeira versão empacotada para Debian/Ubuntu.
+
+ -- Augusto Mateus <au.gus.t@hotmail.com>  Thu, 27 Aug 2026 20:38:07 -0300

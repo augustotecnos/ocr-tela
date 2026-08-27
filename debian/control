@@ -1,0 +1,37 @@
+Source: ocr-tela
+Section: utils
+Priority: optional
+Maintainer: Augusto Mateus <au.gus.t@hotmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Homepage: https://github.com/augustotecnos/ocr-tela
+Vcs-Git: https://github.com/augustotecnos/ocr-tela.git
+Vcs-Browser: https://github.com/augustotecnos/ocr-tela
+Rules-Requires-Root: no
+
+Package: ocr-tela
+Architecture: all
+Depends: ${misc:Depends},
+         python3 (>= 3.10),
+         python3-gi,
+         gir1.2-gtk-4.0,
+         gir1.2-gdkpixbuf-2.0,
+         gir1.2-graphene-1.0,
+         gir1.2-glib-2.0,
+         tesseract-ocr,
+         tesseract-ocr-por,
+         wl-clipboard
+Suggests: tesseract-ocr-eng, tesseract-ocr-spa
+Description: OCR de área da tela para GNOME sob Wayland
+ Selecione uma região da tela e o texto reconhecido vai direto para a área de
+ transferência. Não abre janela de preview, não mostra barra de ferramentas e
+ não deixa imagem alguma em disco.
+ .
+ A tela congela e escurece enquanto você arrasta a seleção, de modo que o
+ conteúdo não muda no meio do caminho. Ao soltar o botão, o reconhecimento é
+ feito localmente pelo Tesseract e o resultado é copiado.
+ .
+ A captura usa o portal org.freedesktop.portal.Screenshot, o único caminho
+ disponível sob Wayland. Nada trafega pela rede.
+ .
+ Para vincular a um atalho de teclado, execute ocr-tela-atalho uma vez.

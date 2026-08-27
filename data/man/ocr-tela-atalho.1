@@ -1,0 +1,40 @@
+.TH OCR\-TELA\-ATALHO 1 "2026-08-27" "ocr-tela 1.1.0" "User Commands"
+.SH NAME
+ocr\-tela\-atalho \- bind ocr-tela to a GNOME keyboard shortcut
+.SH SYNOPSIS
+.B ocr\-tela\-atalho
+.RB [ \-b
+.IR binding ]
+.RB [ \-c
+.IR command ]
+.RB [ \-r ]
+.SH DESCRIPTION
+Registers a custom GNOME keyboard shortcut that runs
+.BR ocr\-tela (1),
+preserving any shortcuts already configured.
+.PP
+This is a separate, optional step on purpose: keyboard shortcuts are user
+configuration, so installing the package never creates one.
+.SH OPTIONS
+.TP
+.BI \-b " binding" "\fR, \fP" \-\-binding " binding"
+Key combination in GNOME syntax. Defaults to
+.BR <Super><Shift>t .
+.TP
+.BI \-c " command" "\fR, \fP" \-\-command " command"
+Command to run. Defaults to the
+.B ocr\-tela
+found in
+.BR PATH .
+.TP
+.BR \-r ", " \-\-remove
+Remove the shortcut instead of creating it.
+.SH EXAMPLES
+.EX
+ocr\-tela\-atalho \-\-binding "<Control><Alt>o"
+ocr\-tela\-atalho \-\-remove
+.EE
+.SH SEE ALSO
+.BR ocr\-tela (1)
+.SH AUTHOR
+Augusto Mateus

@@ -1,0 +1,8 @@
+# O cache do flatpak-builder mora no diretório do projeto e não pode entrar
+# no tarball do pacote-fonte — sem isto ele vai de 30 KB para 72 MB.
+tar-ignore = .flatpak-builder
+tar-ignore = .flatpak-builder/*
+tar-ignore = repo
+tar-ignore = build
+tar-ignore = __pycache__
+tar-ignore = *.pyc
