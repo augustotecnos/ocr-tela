@@ -12,6 +12,11 @@ sem preview, sem barra de ferramentas, sem imagem salva em lugar nenhum.
 [![Feito com](https://img.shields.io/badge/Feito%20com-Python%20%2B%20GTK4-3776AB.svg)](#como-funciona)
 [![Offline](https://img.shields.io/badge/100%25-offline-2ea44f.svg)](#privacidade)
 
+![Demonstração do ocr-tela](assets/demo.gif)
+
+<sub>A tela congela e escurece, você arrasta, e ao soltar o texto já está no clipboard.<br/>
+Documento fictício; o quadro final mostra o texto que o OCR realmente extraiu.</sub>
+
 </div>
 
 ---
@@ -24,33 +29,6 @@ sempre ela deixa um PNG na sua pasta de imagens que você nunca pediu.
 
 O OCR do Windows não faz nada disso. Você aperta o atalho, arrasta, solta — e o texto
 está no clipboard. Ponto. É esse comportamento que o `ocr-tela` reproduz.
-
-## Como fica
-
-```
-     aperta Super+Shift+T
-              │
-              ▼
-   ┌───────────────────────┐
-   │  a tela congela e     │   ← nenhuma janela nova aparece,
-   │  escurece levemente   │     nenhum botão, nenhum menu
-   └───────────────────────┘
-              │
-              ▼
-   ┌───────────────────────┐
-   │  ┌─────────────┐      │   ← a área que você arrasta volta
-   │  │ Nota Fiscal │      │     ao brilho normal, com uma
-   │  │ 1.234,56    │      │     borda fina de 1 px
-   │  └─────────────┘      │
-   └───────────────────────┘
-              │
-              ▼
-        solta o botão
-              │
-              ▼
-    o texto está no clipboard
-    (nada é exibido, nada é salvo)
-```
 
 ## Fluxo interno
 
