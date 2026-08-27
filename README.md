@@ -38,7 +38,7 @@ flowchart LR
     B --> C["PNG movido<br/>para /tmp"]
     C --> D["Sobreposição GTK4<br/>tela congelada"]
     D -->|Esc| X["sai calado"]
-    D -->|arrasta e solta| E["recorte com PIL"]
+    D -->|arrasta e solta| E["recorte com GdkPixbuf"]
     E --> F["tesseract<br/>oem 1 · psm 6"]
     F --> G["wl-copy"]
     G --> H["temporários apagados"]
@@ -49,10 +49,10 @@ flowchart LR
 | Item | Detalhe |
 |---|---|
 | Área de trabalho | GNOME no Wayland (usa o portal `org.freedesktop.portal.Screenshot`) |
-| Python | 3.10+ com PyGObject, GTK 4 e Pillow |
+| Python | 3.10+ com PyGObject, GTK 4 e GdkPixbuf |
 | OCR | `tesseract` 5.x + o modelo do seu idioma |
 | Clipboard | `wl-clipboard` (`wl-copy`) |
-| Notificações | `libnotify-bin` (`notify-send`) — opcional |
+| Notificações | portal do desktop — sem dependência extra |
 
 O `install.sh` resolve tudo isso por você em distros baseadas em Debian/Ubuntu.
 
@@ -87,6 +87,44 @@ O atalho é um passo separado e reversível, no comando `ocr-tela-atalho`:
 ocr-tela-atalho --binding "<Control><Alt>o"   # cria ou muda
 ocr-tela-atalho --remove                      # remove
 ```
+
+### Flatpak
+
+O manifesto está em `flatpak/`. Para construir e instalar localmente:
+
+```bash
+flatpak install --user flathub org.flatpak.Builder
+flatpak run org.flatpak.Builder --force-clean --user --disable-rofiles-fuse \
+  --install-deps-from=flathub --repo=repo build \
+  flatpak/io.github.augustotecnos.ocr-tela.yml
+flatpak install --user repo io.github.augustotecnos.ocr-tela
+```
+
+O manifesto compila leptonica e tesseract, porque não existe módulo pronto em
+`flathub/shared-modules`, e embute os modelos de `por` e `eng` — os mesmos
+arquivos que o pacote `tesseract-ocr-por` do Debian entrega.
+
+**Um passo obrigatório na primeira vez.** Um app em sandbox precisa de permissão
+para capturar a tela sem UI, e o diálogo do sistema só aparece para o app em foco
+— o que nunca acontece aqui, já que a captura ocorre antes de existir janela.
+Conceda uma vez:
+
+```bash
+flatpak permission-set screenshot screenshot io.github.augustotecnos.ocr-tela yes
+```
+
+**Duas diferenças em relação à versão nativa**, ambas consequência do sandbox:
+
+- O portal entrega a captura pelo *document portal* e grava uma cópia em
+  `~/Imagens/Screenshot.png` que o app não tem permissão para apagar. É sempre o
+  mesmo arquivo, sobrescrito a cada uso, mas fica lá. A versão nativa não deixa
+  rastro.
+- O `wl-copy` precisa continuar vivo para servir o clipboard, então a instância
+  do sandbox permanece de pé depois do OCR. Não atrapalha o uso por atalho.
+
+O `flatpak-builder-lint` aponta `finish-args-only-wayland`: o app é Wayland-only
+por natureza (a captura depende do portal do Wayland e o clipboard, do `wl-copy`),
+o que na submissão ao Flathub exige um pedido de exceção.
 
 ### Para empacotadores
 
@@ -189,8 +227,8 @@ O caminho que sobra — e que este projeto usa — é o portal:
 3. Uma **sobreposição GTK4 em tela cheia** desenha essa captura congelada, escurecida.
    Como a imagem já está congelada, o conteúdo não muda enquanto você seleciona — a
    mesma abordagem do Snipping Tool.
-4. Ao soltar o botão, a região vira um recorte com Pillow, passa pelo tesseract e o
-   resultado vai para o `wl-copy`.
+4. Ao soltar o botão, a região vira um recorte com GdkPixbuf, passa pelo tesseract
+   e o resultado vai para o `wl-copy`.
 
 Em telas com múltiplos monitores, abre-se uma janela por monitor, cada uma desenhando
 sua fatia da captura, e as coordenadas da seleção são convertidas de volta para pixels
@@ -263,7 +301,7 @@ script. É inofensivo — o GTK cai para outro backend e a sobreposição funcio
 |---|---|
 | Sistema | Ubuntu 26.04 |
 | GNOME | 50.1, Wayland |
-| Python | 3.13 · GTK 4 · Pillow 12.1 |
+| Python | 3.13 · GTK 4 · GdkPixbuf |
 | tesseract | 5.5.0 (modelos do pacote `tesseract-ocr-por`) |
 | Monitores | 1 × 1920×1080, escala 1 |
 

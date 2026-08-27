@@ -1,0 +1,94 @@
+app-id: io.github.augustotecnos.ocr-tela
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: ocr-tela
+
+finish-args:
+  # Precisa ser cliente Wayland: a sobreposição em tela cheia e o wl-copy.
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  # A captura e as notificações passam por portais, liberados por padrão.
+  - --env=TESSDATA_PREFIX=/app/share/tessdata
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /lib/cmake
+  - /share/man
+  - /share/doc
+  - '*.a'
+  - '*.la'
+
+modules:
+  # ---------------------------------------------------------------- leptonica
+  # Dependência de imagem do tesseract. Não existe módulo pronto em
+  # flathub/shared-modules, então é compilado aqui.
+  - name: leptonica
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DBUILD_PROG=OFF
+      - -DSW_BUILD=OFF
+    sources:
+      - type: archive
+        url: https://github.com/DanBloomberg/leptonica/releases/download/1.87.0/leptonica-1.87.0.tar.gz
+        sha256: c73363397f96eb1295602bf44d708a994ad42046c791bf03ea0505d829bdb6a7
+
+  # ---------------------------------------------------------------- tesseract
+  - name: tesseract
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DBUILD_TRAINING_TOOLS=OFF
+      - -DDISABLE_CURL=ON
+      - -DDISABLE_ARCHIVE=ON
+      - -DSW_BUILD=OFF
+    sources:
+      - type: archive
+        url: https://github.com/tesseract-ocr/tesseract/archive/refs/tags/5.5.3.tar.gz
+        sha256: 9218e62793116d42a9f6d14cd9348518b27f382096eea3d0f2d1a24616bb5884
+
+  # ------------------------------------------------------ modelos de idioma
+  # Os mesmos arquivos que o pacote tesseract-ocr-por do Debian/Ubuntu entrega.
+  - name: tessdata
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 por.traineddata /app/share/tessdata/por.traineddata
+      - install -Dm644 eng.traineddata /app/share/tessdata/eng.traineddata
+    sources:
+      - type: file
+        url: https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/por.traineddata
+        sha256: c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb
+      - type: file
+        url: https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/eng.traineddata
+        sha256: 7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2
+
+  # -------------------------------------------------------------- wl-clipboard
+  # Fornece o wl-copy. No Wayland, quem coloca algo no clipboard precisa
+  # continuar vivo para servir o conteúdo — o wl-copy bifurca e faz isso.
+  - name: wl-clipboard
+    buildsystem: meson
+    config-opts:
+      # Sem isso o meson tenta gravar completions em /usr/share, fora do /app.
+      - -Dfishcompletiondir=no
+      - -Dzshcompletiondir=no
+    sources:
+      - type: archive
+        url: https://github.com/bugaevc/wl-clipboard/archive/refs/tags/v2.3.0.tar.gz
+        sha256: b4dc560973f0cd74e02f817ffa2fd44ba645a4f1ea94b7b9614dacc9f895f402
+
+  # ------------------------------------------------------------------ ocr-tela
+  - name: ocr-tela
+    buildsystem: simple
+    build-commands:
+      - make install PREFIX=/app INSTALL_SYSTEMD=0
+    sources:
+      - type: git
+        url: https://github.com/augustotecnos/ocr-tela.git
+        tag: v1.1.0

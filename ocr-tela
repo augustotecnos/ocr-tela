@@ -15,12 +15,13 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Graphene", "1.0")
 gi.require_version("Gio", "2.0")
-from gi.repository import Gdk, Gio, GLib, Graphene, Gtk
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gtk
 
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 APP_ID = "io.github.augustotecnos.ocr-tela"
 
 
@@ -40,8 +41,26 @@ TMP_CROP = f"/tmp/ocr-tela-{os.getpid()}-crop.png"
 
 
 def notify(msg):
-    if NOTIFY:
-        subprocess.run(["notify-send", "-t", "2500", "-a", "OCR de tela", "OCR", msg])
+    """Notifica pelo portal, que funciona igual dentro e fora de um sandbox.
+
+    Evita depender do binário notify-send, ausente no runtime do Flatpak.
+    """
+    if not NOTIFY:
+        return
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        bus.call_sync(
+            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Notification", "AddNotification",
+            GLib.Variant("(sa{sv})", ("ocr-tela", {
+                "title": GLib.Variant("s", "OCR"),
+                "body": GLib.Variant("s", msg),
+                "priority": GLib.Variant("s", "normal"),
+            })),
+            None, Gio.DBusCallFlags.NONE, 5000, None,
+        )
+    except GLib.Error:
+        pass        # sem notificação é melhor que quebrar o OCR
 
 
 def cleanup():
@@ -92,7 +111,14 @@ def grab_screen():
     src = unquote(out["uri"].replace("file://", ""))
     if not os.path.exists(src):
         return None
-    shutil.move(src, TMP_SHOT)
+
+    # Copiar, não mover: em sandbox o portal entrega o arquivo pelo document
+    # portal, que fica noutro sistema de arquivos e não aceita remoção.
+    shutil.copyfile(src, TMP_SHOT)
+    try:
+        os.unlink(src)      # fora do sandbox, tira o PNG da pasta de imagens
+    except OSError:
+        pass
     return TMP_SHOT
 
 
@@ -247,16 +273,25 @@ def select_area(png):
 
 
 def ocr(png, rect):
-    """Recorta a região, reduz se for grande demais e devolve o texto lido."""
-    import PIL.Image
+    """Recorta a região, reduz se for grande demais e devolve o texto lido.
 
+    Usa GdkPixbuf em vez de Pillow: já vem no runtime do GNOME, o que evita
+    empacotar uma dependência a mais no Flatpak e no .deb.
+    """
     x, y, w, h = rect
-    img = PIL.Image.open(png).crop((x, y, x + w, y + h))
-    if max(img.size) > MAX_SIDE:
-        scale = MAX_SIDE / max(img.size)
-        img = img.resize((max(1, int(img.width * scale)),
-                          max(1, int(img.height * scale))), PIL.Image.LANCZOS)
-    img.save(TMP_CROP)
+    full = GdkPixbuf.Pixbuf.new_from_file(png)
+    x = max(0, min(x, full.get_width() - 1))
+    y = max(0, min(y, full.get_height() - 1))
+    w = max(1, min(w, full.get_width() - x))
+    h = max(1, min(h, full.get_height() - y))
+
+    crop = full.new_subpixbuf(x, y, w, h)
+    longest = max(w, h)
+    if longest > MAX_SIDE:
+        scale = MAX_SIDE / longest
+        crop = crop.scale_simple(max(1, int(w * scale)), max(1, int(h * scale)),
+                                 GdkPixbuf.InterpType.BILINEAR)
+    crop.savev(TMP_CROP, "png", [], [])
 
     env = dict(os.environ)
     if TESSDATA and os.path.isdir(TESSDATA):

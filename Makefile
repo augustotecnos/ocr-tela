@@ -6,6 +6,8 @@ DESTDIR ?=
 BINDIR  := $(PREFIX)/bin
 DATADIR := $(PREFIX)/share
 SYSTEMD_USER_DIR ?= $(PREFIX)/lib/systemd/user
+# O Flatpak não usa systemd do usuário; passe INSTALL_SYSTEMD=0 para pular.
+INSTALL_SYSTEMD ?= 1
 
 APPID := io.github.augustotecnos.ocr-tela
 
@@ -21,10 +23,12 @@ install:
 	install -Dm644 data/$(APPID).desktop      $(DESTDIR)$(DATADIR)/applications/$(APPID).desktop
 	install -Dm644 data/$(APPID).metainfo.xml $(DESTDIR)$(DATADIR)/metainfo/$(APPID).metainfo.xml
 	install -Dm644 data/$(APPID).svg          $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/$(APPID).svg
+ifeq ($(INSTALL_SYSTEMD),1)
 	install -d $(DESTDIR)$(SYSTEMD_USER_DIR)
 	sed 's|@BINDIR@|$(BINDIR)|g' data/ocr-warmup.service.in \
 	    > $(DESTDIR)$(SYSTEMD_USER_DIR)/ocr-warmup.service
 	chmod 644 $(DESTDIR)$(SYSTEMD_USER_DIR)/ocr-warmup.service
+endif
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/ocr-tela

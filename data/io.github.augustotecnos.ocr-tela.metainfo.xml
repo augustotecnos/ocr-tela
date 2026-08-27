@@ -68,6 +68,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.0" date="2026-08-27">
+      <description>
+        <p>Flatpak support. Notifications now go through the desktop portal and
+        image handling uses GdkPixbuf, so libnotify-bin and Pillow are no longer
+        needed.</p>
+        <p xml:lang="pt-BR">Suporte a Flatpak. As notificações passam pelo portal
+        do desktop e o tratamento de imagem usa GdkPixbuf, então libnotify-bin e
+        Pillow deixam de ser necessários.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-08-27">
       <description>
         <p>First release.</p>
