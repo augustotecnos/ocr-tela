@@ -3,6 +3,11 @@ __pycache__/
 *.egg-info/
 .venv/
 /build/
+/.flatpak-builder/
+# artefatos gerados por dpkg-buildpackage
 /debian/.debhelper/
 /debian/ocr-tela/
-/.flatpak-builder/
+/debian/files
+/debian/debhelper-build-stamp
+/debian/*.substvars
+/debian/*.debhelper.log
