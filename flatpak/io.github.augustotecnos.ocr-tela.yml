@@ -91,4 +91,4 @@ modules:
     sources:
       - type: git
         url: https://github.com/augustotecnos/ocr-tela.git
-        tag: v1.1.0
+        tag: v1.1.1

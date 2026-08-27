@@ -1,3 +1,9 @@
+ocr-tela (1.1.1) resolute; urgency=medium
+
+  * Corrige a notificação não aparecer quando disparado por atalho de teclado.
+
+ -- Augusto Mateus <au.gus.t@hotmail.com>  Thu, 27 Aug 2026 20:58:28 -0300
+
 ocr-tela (1.1.0) resolute; urgency=medium
 
   * Primeira versão empacotada para Debian/Ubuntu.

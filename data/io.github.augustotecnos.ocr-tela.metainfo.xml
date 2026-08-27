@@ -68,6 +68,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.1.1" date="2026-08-27">
+      <description>
+        <p>Fixes the confirmation notification not appearing when launched from
+        a keyboard shortcut.</p>
+        <p xml:lang="pt-BR">Corrige a notificação de confirmação não aparecer
+        quando o programa é disparado por atalho de teclado.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-08-27">
       <description>
         <p>Flatpak support. Notifications now go through the desktop portal and

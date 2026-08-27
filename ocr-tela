@@ -21,7 +21,7 @@ gi.require_version("Gio", "2.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gtk
 
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 APP_ID = "io.github.augustotecnos.ocr-tela"
 
 
@@ -40,25 +40,43 @@ TMP_SHOT = f"/tmp/ocr-tela-{os.getpid()}.png"
 TMP_CROP = f"/tmp/ocr-tela-{os.getpid()}-crop.png"
 
 
-def notify(msg):
-    """Notifica pelo portal, que funciona igual dentro e fora de um sandbox.
+IN_FLATPAK = os.path.exists("/.flatpak-info")
 
-    Evita depender do binário notify-send, ausente no runtime do Flatpak.
+
+def notify(msg):
+    """Mostra a confirmação, sem depender do binário notify-send.
+
+    Fora de um sandbox usa org.freedesktop.Notifications diretamente — o mesmo
+    caminho do notify-send. O portal não serve aqui: ele deduz o identificador
+    do app a partir de como o processo foi lançado, e quando o disparo vem de um
+    atalho de teclado essa dedução resulta em vazio, fazendo o GNOME Shell
+    recusar com "The app by ID \"\" could not be found". Dentro do Flatpak o
+    identificador é conhecido, então o portal funciona e é o único caminho
+    permitido.
     """
     if not NOTIFY:
         return
     try:
         bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-        bus.call_sync(
-            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
-            "org.freedesktop.portal.Notification", "AddNotification",
-            GLib.Variant("(sa{sv})", ("ocr-tela", {
-                "title": GLib.Variant("s", "OCR"),
-                "body": GLib.Variant("s", msg),
-                "priority": GLib.Variant("s", "normal"),
-            })),
-            None, Gio.DBusCallFlags.NONE, 5000, None,
-        )
+        if IN_FLATPAK:
+            bus.call_sync(
+                "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                "org.freedesktop.portal.Notification", "AddNotification",
+                GLib.Variant("(sa{sv})", ("ocr-tela", {
+                    "title": GLib.Variant("s", "OCR"),
+                    "body": GLib.Variant("s", msg),
+                    "priority": GLib.Variant("s", "normal"),
+                })),
+                None, Gio.DBusCallFlags.NONE, 5000, None,
+            )
+        else:
+            bus.call_sync(
+                "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                "org.freedesktop.Notifications", "Notify",
+                GLib.Variant("(susssasa{sv}i)",
+                             ("OCR de tela", 0, APP_ID, "OCR", msg, [], {}, 2500)),
+                GLib.VariantType.new("(u)"), Gio.DBusCallFlags.NONE, 5000, None,
+            )
     except GLib.Error:
         pass        # sem notificação é melhor que quebrar o OCR
 
