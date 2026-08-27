@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Screen Area OCR
+Name[pt_BR]=OCR de área da tela
+Comment=Select a region of the screen and copy the recognized text
+Comment[pt_BR]=Selecione uma área da tela e copie o texto reconhecido
+Exec=ocr-tela
+Icon=io.github.augustotecnos.ocr-tela
+Terminal=false
+Categories=Utility;
+Keywords=OCR;text;screenshot;clipboard;recognition;
+Keywords[pt_BR]=OCR;texto;captura;tela;área de transferência;reconhecimento;
+StartupNotify=false

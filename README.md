@@ -66,19 +66,40 @@ cd ocr-tela
 
 O instalador vai:
 
-1. Instalar as dependências que faltarem (via `apt`, pedindo `sudo` só nessa etapa)
-2. Baixar os modelos **tessdata_fast** em `~/.tessdata_fast` — cerca de 2× mais rápidos
-3. Copiar `ocr-tela` para `~/.local/bin`
-4. Ativar um serviço `systemd --user` que pré-carrega os modelos no login
-5. Registrar o atalho `Super`+`Shift`+`T`, **preservando** seus atalhos existentes
+1. Instalar as dependências que faltarem, todas do próprio repositório da distro
+   (via `apt`, pedindo `sudo` só nessa etapa)
+2. Instalar em `~/.local` via `make install`
+3. Ativar um serviço `systemd --user` que pré-carrega os modelos no login
+4. Registrar o atalho `Super`+`Shift`+`T`, **preservando** seus atalhos existentes
 
-Escolhendo outros idiomas e outro atalho:
+Escolhendo outros idiomas, outro atalho ou pulando etapas:
 
 ```bash
-OCR_LANGS="por eng spa" OCR_KEYBIND="<Control><Alt>o" ./install.sh
+OCR_LANGS="por eng" OCR_KEYBIND="<Control><Alt>o" ./install.sh
+./install.sh --no-shortcut --no-warmup
 ```
 
 Para remover tudo: `./uninstall.sh`
+
+O atalho é um passo separado e reversível, no comando `ocr-tela-atalho`:
+
+```bash
+ocr-tela-atalho --binding "<Control><Alt>o"   # cria ou muda
+ocr-tela-atalho --remove                      # remove
+```
+
+### Para empacotadores
+
+Não use o `install.sh` — ele é o caminho de instalação manual. Use o alvo padrão,
+que respeita `DESTDIR` e `PREFIX` e não toca em configuração do usuário:
+
+```bash
+make install DESTDIR=debian/ocr-tela PREFIX=/usr
+make check     # valida .desktop, AppStream e sintaxe
+```
+
+O pacote nunca deve registrar o atalho nem ativar o serviço: as duas coisas são
+configuração do usuário e ficam a cargo dele.
 
 ## Uso
 
@@ -102,7 +123,7 @@ Tudo por variável de ambiente — nada de arquivo de config para manter.
 | `OCR_NOTIFY` | `1` | `0` deixa 100% silencioso, sem nem a confirmação |
 | `OCR_DIM` | `0.45` | Escurecimento fora da seleção, de `0` a `1` |
 | `OCR_MAX_SIDE` | `1400` | Recortes maiores são reduzidos antes do OCR |
-| `OCR_TESSDATA` | `~/.tessdata_fast` | Pasta dos modelos |
+| `OCR_TESSDATA` | *(vazio)* | Pasta alternativa de modelos. Vazio usa os do sistema |
 
 Para deixar permanente, edite o comando do atalho:
 
@@ -120,10 +141,14 @@ Medido num Ubuntu 26.04, CPU sem aceleração de GPU:
 | OCR de região pequena (500×120) | 0,49 s |
 | OCR de região média (960×400) | 1,35 s |
 
-Três decisões explicam esses números: os modelos `tessdata_fast` no lugar dos padrão,
-`--oem 1 --psm 6` (LSTM puro, tratando a seleção como um bloco de texto) e a redução
-de recortes grandes para no máximo 1400 px — acima disso o OCR fica mais lento sem
-ganhar precisão.
+Duas decisões explicam esses números: `--oem 1 --psm 6` (LSTM puro, tratando a
+seleção como um bloco de texto) e a redução de recortes grandes para no máximo
+1400 px — acima disso o OCR fica mais lento sem ganhar precisão.
+
+Uma versão anterior baixava os modelos `tessdata_fast` do GitHub achando que eram
+mais rápidos que os da distro. Ao medir, os arquivos se mostraram **byte a byte
+idênticos** aos do pacote `tesseract-ocr-por` do Ubuntu — mesmo MD5. O download
+foi removido: não fazia diferença alguma e impedia o empacotamento.
 
 ## Privacidade
 
@@ -239,7 +264,7 @@ script. É inofensivo — o GTK cai para outro backend e a sobreposição funcio
 | Sistema | Ubuntu 26.04 |
 | GNOME | 50.1, Wayland |
 | Python | 3.13 · GTK 4 · Pillow 12.1 |
-| tesseract | 5.5.0 (modelos `tessdata_fast`) |
+| tesseract | 5.5.0 (modelos do pacote `tesseract-ocr-por`) |
 | Monitores | 1 × 1920×1080, escala 1 |
 
 ## Licença

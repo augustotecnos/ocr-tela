@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a6cf7"/>
+      <stop offset="1" stop-color="#1e2a63"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+
+  <!-- cantos da seleção -->
+  <g fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round">
+    <path d="M28 44 V32 A4 4 0 0 1 32 28 H44"/>
+    <path d="M84 28 H96 A4 4 0 0 1 100 32 V44"/>
+    <path d="M100 84 V96 A4 4 0 0 1 96 100 H84"/>
+    <path d="M44 100 H32 A4 4 0 0 1 28 96 V84"/>
+  </g>
+
+  <!-- texto reconhecido -->
+  <g fill="#ffffff">
+    <rect x="43" y="52" width="42" height="7" rx="3.5"/>
+    <rect x="43" y="66" width="30" height="7" rx="3.5" opacity=".85"/>
+    <rect x="43" y="80" width="37" height="7" rx="3.5" opacity=".7"/>
+  </g>
+</svg>

@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Registra (ou remove) o atalho global do ocr-tela nas configurações do GNOME.
+
+Mexer em atalho é configuração do usuário, então isto é um passo separado e
+opcional — nunca algo que a instalação de um pacote faça por conta própria.
+"""
+import argparse
+import shutil
+import sys
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
+
+SCHEMA = "org.gnome.settings-daemon.plugins.media-keys"
+ENTRY_SCHEMA = f"{SCHEMA}.custom-keybinding"
+PATH = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ocr-tela/"
+
+
+def paths(media):
+    return list(media.get_strv("custom-keybindings"))
+
+
+def add(binding, command):
+    media = Gio.Settings.new(SCHEMA)
+    current = paths(media)
+    if PATH not in current:
+        media.set_strv("custom-keybindings", current + [PATH])
+
+    entry = Gio.Settings.new_with_path(ENTRY_SCHEMA, PATH)
+    entry.set_string("name", "OCR de área da tela")
+    entry.set_string("command", command)
+    entry.set_string("binding", binding)
+    Gio.Settings.sync()
+    print(f"Atalho registrado: {binding} -> {command}")
+
+
+def remove():
+    media = Gio.Settings.new(SCHEMA)
+    current = paths(media)
+    if PATH in current:
+        media.set_strv("custom-keybindings", [p for p in current if p != PATH])
+        Gio.Settings.sync()
+        print("Atalho removido.")
+    else:
+        print("Nenhum atalho para remover.")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("-b", "--binding", default="<Super><Shift>t",
+                    help="combinação de teclas (padrão: <Super><Shift>t)")
+    ap.add_argument("-c", "--command", default=None,
+                    help="comando a executar (padrão: o ocr-tela encontrado no PATH)")
+    ap.add_argument("-r", "--remove", action="store_true",
+                    help="remove o atalho em vez de criar")
+    args = ap.parse_args()
+
+    if args.remove:
+        remove()
+        return 0
+
+    command = args.command or shutil.which("ocr-tela")
+    if not command:
+        print("Não encontrei o 'ocr-tela' no PATH. Use --command com o caminho completo.",
+              file=sys.stderr)
+        return 1
+
+    add(args.binding, command)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

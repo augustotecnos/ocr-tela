@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.augustotecnos.ocr-tela</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Screen Area OCR</name>
+  <name xml:lang="pt-BR">OCR de área da tela</name>
+  <summary>Copy text from anywhere on your screen</summary>
+  <summary xml:lang="pt-BR">Copie texto de qualquer lugar da tela</summary>
+
+  <description>
+    <p>
+      Select a region of the screen and the recognized text goes straight to your
+      clipboard. No preview window, no toolbar, and no image left behind on disk.
+      It recreates the behaviour of the Windows Snipping Tool text extraction on
+      GNOME under Wayland.
+    </p>
+    <p xml:lang="pt-BR">
+      Selecione uma área da tela e o texto reconhecido vai direto para a área de
+      transferência. Sem janela de preview, sem barra de ferramentas e sem deixar
+      imagem alguma em disco. Recria no GNOME sob Wayland o comportamento da
+      extração de texto do Snipping Tool do Windows.
+    </p>
+    <p>How it works:</p>
+    <p xml:lang="pt-BR">Como funciona:</p>
+    <ul>
+      <li>The screen freezes and dims, so the content cannot change while you select</li>
+      <li xml:lang="pt-BR">A tela congela e escurece, então o conteúdo não muda enquanto você seleciona</li>
+      <li>You drag a rectangle over the text you want</li>
+      <li xml:lang="pt-BR">Você arrasta um retângulo sobre o texto desejado</li>
+      <li>On release, the text is recognized locally and copied</li>
+      <li xml:lang="pt-BR">Ao soltar, o texto é reconhecido localmente e copiado</li>
+      <li>Everything runs offline; nothing is ever uploaded</li>
+      <li xml:lang="pt-BR">Tudo roda offline; nada é enviado para lugar nenhum</li>
+    </ul>
+    <p>
+      Recognition is done by Tesseract. To bind it to a keyboard shortcut, run
+      ocr-tela-atalho once.
+    </p>
+    <p xml:lang="pt-BR">
+      O reconhecimento é feito pelo Tesseract. Para vincular a um atalho de
+      teclado, rode ocr-tela-atalho uma vez.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.augustotecnos.ocr-tela.desktop</launchable>
+  <provides>
+    <binary>ocr-tela</binary>
+  </provides>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/augustotecnos/ocr-tela/main/assets/screenshot-selecao.png</image>
+      <caption>Selecting a region over a document</caption>
+      <caption xml:lang="pt-BR">Selecionando uma área sobre um documento</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/augustotecnos/ocr-tela</url>
+  <url type="bugtracker">https://github.com/augustotecnos/ocr-tela/issues</url>
+  <url type="vcs-browser">https://github.com/augustotecnos/ocr-tela</url>
+
+  <developer id="io.github.augustotecnos">
+    <name>Augusto Mateus</name>
+  </developer>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-08-27">
+      <description>
+        <p>First release.</p>
+        <p xml:lang="pt-BR">Primeira versão.</p>
+      </description>
+    </release>
+  </releases>
+</component>
