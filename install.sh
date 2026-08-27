@@ -20,7 +20,7 @@ case "${XDG_CURRENT_DESKTOP:-}" in
 esac
 
 # ------------------------------------------------------------- dependências
-PKGS=(python3-gi gir1.2-gtk-4.0 python3-pil python3-cairo tesseract-ocr wl-clipboard libnotify-bin)
+PKGS=(python3-gi gir1.2-gtk-4.0 python3-pil tesseract-ocr wl-clipboard libnotify-bin)
 for l in $LANGS; do [ "$l" = "eng" ] || PKGS+=("tesseract-ocr-$l"); done
 
 MISSING=()

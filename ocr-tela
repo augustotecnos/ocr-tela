@@ -15,9 +15,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-gi.require_version("GdkPixbuf", "2.0")
+gi.require_version("Graphene", "1.0")
 gi.require_version("Gio", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Graphene, Gtk
 
 
 def _env(name, default):
@@ -97,29 +97,81 @@ def _rect(x0, y0, dx, dy):
     return min(x0, x0 + dx), min(y0, y0 + dy), abs(dx), abs(dy)
 
 
+class SelectionOverlay(Gtk.Widget):
+    """Desenha a tela congelada, o escurecimento e o retângulo da seleção.
+
+    Cada instância cobre um monitor e mostra apenas a fatia correspondente da
+    captura, que é da área de trabalho inteira.
+    """
+
+    def __init__(self, texture, origin, span):
+        super().__init__()
+        self._texture = texture
+        self._origin = origin      # canto deste monitor, em pixels da imagem
+        self._span = span          # tamanho deste monitor, em pixels da imagem
+        self.rect = None           # seleção atual, em coordenadas do widget
+        self.set_hexpand(True)
+        self.set_vexpand(True)
+
+    def _texture_rect(self, w, h):
+        """Onde desenhar a textura inteira para a fatia deste monitor preencher o widget."""
+        ox, oy = self._origin
+        kx, ky = w / self._span[0], h / self._span[1]
+        return Graphene.Rect().init(-ox * kx, -oy * ky,
+                                    self._texture.get_width() * kx,
+                                    self._texture.get_height() * ky)
+
+    def do_snapshot(self, snapshot):
+        w, h = self.get_width(), self.get_height()
+        if w <= 0 or h <= 0:
+            return
+        bounds = Graphene.Rect().init(0, 0, w, h)
+        dest = self._texture_rect(w, h)
+
+        shade = Gdk.RGBA()
+        shade.red = shade.green = shade.blue = 0.0
+        shade.alpha = DIM
+
+        snapshot.push_clip(bounds)
+        snapshot.append_texture(self._texture, dest)      # tela congelada
+        snapshot.append_color(shade, bounds)              # escurece tudo
+
+        if self.rect:
+            x, y, rw, rh = self.rect
+            snapshot.push_clip(Graphene.Rect().init(x, y, rw, rh))
+            snapshot.append_texture(self._texture, dest)  # brilho na seleção
+            snapshot.pop()
+
+            line = Gdk.RGBA()
+            line.red = line.green = line.blue = line.alpha = 1.0
+            for edge in ((x, y, rw, 1), (x, y + rh - 1, rw, 1),
+                         (x, y, 1, rh), (x + rw - 1, y, 1, rh)):
+                snapshot.append_color(line, Graphene.Rect().init(*edge))
+
+        snapshot.pop()
+
+
 def select_area(png):
     """Congela a tela e deixa o usuário arrastar a seleção.
 
     Abre uma janela por monitor, cada uma desenhando a fatia correspondente da
     captura. Devolve (x, y, w, h) em pixels da imagem, ou None se cancelado.
     """
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file(png)
-    iw, ih = pixbuf.get_width(), pixbuf.get_height()
+    texture = Gdk.Texture.new_from_filename(png)
+    iw, ih = texture.get_width(), texture.get_height()
     result = {"rect": None}
 
     app = Gtk.Application(application_id="io.github.ocrtela",
                           flags=Gio.ApplicationFlags.NON_UNIQUE)
 
     def on_activate(application):
-        display = Gdk.Display.get_default()
-        monitors = display.get_monitors()
+        monitors = Gdk.Display.get_default().get_monitors()
         geoms = [monitors.get_item(i).get_geometry()
                  for i in range(monitors.get_n_items())]
 
         # Área de trabalho em coordenadas lógicas -> fator para pixels da imagem.
-        dw = max(g.x + g.width for g in geoms)
-        dh = max(g.y + g.height for g in geoms)
-        fx, fy = iw / dw, ih / dh
+        fx = iw / max(g.x + g.width for g in geoms)
+        fy = ih / max(g.y + g.height for g in geoms)
 
         windows = []
 
@@ -130,60 +182,30 @@ def select_area(png):
         for index in range(monitors.get_n_items()):
             monitor = monitors.get_item(index)
             geom = geoms[index]
-            # Recorte da captura que pertence a este monitor, em pixels.
-            ox, oy = geom.x * fx, geom.y * fy
 
             win = Gtk.ApplicationWindow(application=application)
             win.set_decorated(False)
             win.fullscreen_on_monitor(monitor)
             win.set_cursor(Gdk.Cursor.new_from_name("crosshair", None))
 
-            area = Gtk.DrawingArea()
-            win.set_child(area)
-            state = {"start": (0, 0), "cur": None}
+            overlay = SelectionOverlay(texture,
+                                       (geom.x * fx, geom.y * fy),
+                                       (geom.width * fx, geom.height * fy))
+            win.set_child(overlay)
+            start = {"pos": (0, 0)}
 
-            def draw(widget, cr, w, h, ox=ox, oy=oy, geom=geom, state=state):
-                sx = w / (geom.width * fx)
-                sy = h / (geom.height * fy)
+            def on_begin(gesture, x, y, start=start, overlay=overlay):
+                start["pos"] = (x, y)
+                overlay.rect = None
 
-                def paint_screen():
-                    cr.save()
-                    cr.scale(sx, sy)
-                    Gdk.cairo_set_source_pixbuf(cr, pixbuf, -ox, -oy)
-                    cr.paint()
-                    cr.restore()
+            def on_update(gesture, dx, dy, start=start, overlay=overlay):
+                overlay.rect = _rect(*start["pos"], dx, dy)
+                overlay.queue_draw()
 
-                paint_screen()                        # tela congelada ao fundo
-                cr.set_source_rgba(0, 0, 0, DIM)      # escurece tudo
-                cr.rectangle(0, 0, w, h)
-                cr.fill()
-
-                if state["cur"]:
-                    x, y, rw, rh = state["cur"]
-                    cr.save()                         # brilho de volta na seleção
-                    cr.rectangle(x, y, rw, rh)
-                    cr.clip()
-                    paint_screen()
-                    cr.restore()
-                    cr.set_source_rgb(1, 1, 1)
-                    cr.set_line_width(1)
-                    cr.rectangle(x + 0.5, y + 0.5, rw, rh)
-                    cr.stroke()
-
-            area.set_draw_func(draw)
-
-            def on_begin(gesture, x, y, state=state):
-                state["start"] = (x, y)
-                state["cur"] = None
-
-            def on_update(gesture, dx, dy, state=state, area=area):
-                state["cur"] = _rect(*state["start"], dx, dy)
-                area.queue_draw()
-
-            def on_end(gesture, dx, dy, state=state, area=area, geom=geom):
-                x, y, w, h = _rect(*state["start"], dx, dy)
+            def on_end(gesture, dx, dy, start=start, overlay=overlay, geom=geom):
+                x, y, w, h = _rect(*start["pos"], dx, dy)
                 if w >= MIN_SEL and h >= MIN_SEL:
-                    lw, lh = area.get_width(), area.get_height()
+                    lw, lh = overlay.get_width(), overlay.get_height()
                     # Coordenadas da janela -> lógicas globais -> pixels da imagem.
                     gx = geom.x + x * geom.width / lw
                     gy = geom.y + y * geom.height / lh
@@ -197,7 +219,7 @@ def select_area(png):
             gesture.connect("drag-begin", on_begin)
             gesture.connect("drag-update", on_update)
             gesture.connect("drag-end", on_end)
-            area.add_controller(gesture)
+            overlay.add_controller(gesture)
 
             keys = Gtk.EventControllerKey()
 

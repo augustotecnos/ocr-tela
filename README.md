@@ -49,7 +49,7 @@ flowchart LR
 | Item | Detalhe |
 |---|---|
 | Área de trabalho | GNOME no Wayland (usa o portal `org.freedesktop.portal.Screenshot`) |
-| Python | 3.10+ com PyGObject, GTK 4, Pillow, pycairo |
+| Python | 3.10+ com PyGObject, GTK 4 e Pillow |
 | OCR | `tesseract` 5.x + o modelo do seu idioma |
 | Clipboard | `wl-clipboard` (`wl-copy`) |
 | Notificações | `libnotify-bin` (`notify-send`) — opcional |
