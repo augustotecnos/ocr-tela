@@ -12,6 +12,8 @@ sem preview, sem barra de ferramentas, sem imagem salva em lugar nenhum.
 [![Feito com](https://img.shields.io/badge/Feito%20com-Python%20%2B%20GTK4-3776AB.svg)](#como-funciona)
 [![Offline](https://img.shields.io/badge/100%25-offline-2ea44f.svg)](#privacidade)
 
+**Português** · [English](README.en.md)
+
 ![Demonstração do ocr-tela](assets/demo.gif)
 
 <sub>A tela congela e escurece, você arrasta, e ao soltar o texto já está no clipboard.<br/>
@@ -35,7 +37,7 @@ está no clipboard. Ponto. É esse comportamento que o `ocr-tela` reproduz.
 ```mermaid
 flowchart LR
     A["Super+Shift+T"] --> B["Portal do GNOME<br/>interactive=false"]
-    B --> C["PNG movido<br/>para /tmp"]
+    B --> C["PNG copiado<br/>para /tmp"]
     C --> D["Sobreposição GTK4<br/>tela congelada"]
     D -->|Esc| X["sai calado"]
     D -->|arrasta e solta| E["recorte com GdkPixbuf"]
@@ -221,8 +223,8 @@ foi removido: não fazia diferença alguma e impedia o empacotamento.
 ## Privacidade
 
 Nada sai da sua máquina. O tesseract roda localmente e não há nenhuma chamada de rede
-em tempo de execução — o único download acontece uma vez, no instalador, para pegar os
-modelos de idioma.
+em tempo de execução — o instalador só busca pacotes do repositório da sua própria
+distribuição.
 
 A captura vive por volta de um segundo em `/tmp` e é apagada num bloco `finally`, então
 some mesmo se o OCR falhar no meio.
@@ -252,8 +254,10 @@ O caminho que sobra — e que este projeto usa — é o portal:
 1. **`org.freedesktop.portal.Screenshot` com `interactive=false`** captura a área de
    trabalho inteira sem exibir absolutamente nada. Com `interactive=true` você recebe a
    UI completa do GNOME, que é justamente o que queremos evitar.
-2. O portal grava o PNG na sua pasta de imagens. O script **move o arquivo para `/tmp`
-   imediatamente**, para não deixar rastro.
+2. O portal grava o PNG na sua pasta de imagens. O script **copia para `/tmp`
+   imediatamente** e apaga o original, sem deixar rastro. Copia em vez de mover porque
+   sob sandbox o arquivo chega pelo *document portal*, noutro sistema de arquivos e sem
+   permissão de remoção.
 3. Uma **sobreposição GTK4 em tela cheia** desenha essa captura congelada, escurecida.
    Como a imagem já está congelada, o conteúdo não muda enquanto você seleciona — a
    mesma abordagem do Snipping Tool.
